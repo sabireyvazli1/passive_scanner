@@ -51,32 +51,20 @@ else
         fi
 
         echo "*** Harvesting subdomains with ASSETFINDER ***"
-        assetfinder --subs-only $url >> $url/recon/assets.txt
-        cat $url/recon/assets.txt | filter-resolved | grep $1 >> $url/recon/final.txt
-        rm $url/recon/assets.txt
+        assetfinder --subs-only $url | filter-resolved | grep $1 | anew $url/recon/final.txt
         echo "-----------------------------------------------"
 
         echo "*** Harvesting subdomains with SUBFINDER ***"
-        cat $url/recon/$1.txt | subfinder >> $url/recon/sub.txt &
-        cat $url/recon/sub.txt | filter-resolved | grep $1 | anew $url/recon/final.txt
-        rm $url/recon/sub.txt
+        cat $url/recon/$1.txt | subfinder | filter-resolved | grep $1 | anew $url/recon/final.txt &
         echo "-----------------------------------------------"
 
         #echo "*** Harvesting subdomains with AMASS ***"
-        #amass enum -passive -d $url >> $url/recon/f.txt
-        #sort -u $url/recon/f.txt | anew $url/recon/final.txt
-        #rm $url/recon/f.txt
+        #amass enum -passive -d $url | grep $1 | sort -u | anew $url/recon/final.txt
         #echo "-----------------------------------------------"
 
         echo "*** Probing for alive domains with HTTPROBE ***"
-        cat $url/recon/final.txt | sort -u | httprobe -s -p https:443 -p https:8443 | sed 's/https\?:\/\///' | tr -d ':348' >> $url/recon/httprobe/a.txt
-        cat $url/recon/final.txt | sort -u | httprobe -s -p https:443 -p https:8443 | sed 's/https\?:\/\///' >> $url/recon/httprobe/with_port.txt
-        cat $url/recon/final.txt | sort -u | httprobe -s -p http:80 -p http:81 -p http:82 -p http:8080 | sed 's/http\?:\/\///' | tr -d ':0128' >> $url/recon/httprobe/b.txt
-        cat $url/recon/final.txt | sort -u | httprobe -s -p http:80 -p http:81 -p http:82 -p http:8080 | sed 's/http\?:\/\///' | anew $url/recon/httprobe/with_port.txt
-        sort -u $url/recon/httprobe/a.txt > $url/recon/httprobe/alive.txt
-        sort -u $url/recon/httprobe/b.txt | anew $url/recon/httprobe/alive.txt
-        rm $url/recon/httprobe/b.txt
-        rm $url/recon/httprobe/a.txt
+        cat $url/recon/final.txt | sort -u | httprobe  -p http:81 -p http:82 -p http:8080 -p https:8443 | sed 's/https\?:\/\///' | tr -d ':012348' | sort -u | anew $url/recon/httprobe/alive.txt
+        cat $url/recon/final.txt | sort -u | httprobe -s -p http:81 -p http:80 -p https:443 -p http:82 -p http:8080 -p https:8443 | sed 's/https\?:\/\///' >> $url/recon/httprobe/with_port.txt
         echo "----------------------------------------------"
 
         echo "*** Checking for DNS records with DNSX ***"
@@ -84,11 +72,7 @@ else
         echo "----------------------------------------------"
 
         echo "*** Checking for possible subdomain takeover with SUBZY ***"
-        if [ ! -f "$url/recon/potential_takeovers/potential_takeovers.txt" ];then
-                touch $url/recon/potential_takeovers/potential_takeovers.txt
-        fi
-
-        subzy run --targets $url/recon/httprobe/alive.txt >> $url/recon/potential_takeovers/potential_takeovers.txt
+        subzy run --targets $url/recon/httprobe/alive.txt | anew $url/recon/potential_takeovers/potential_takeovers.txt
         echo "----------------------------------------------"
 
         echo "*** Scanning for open ports with NMAP ***"
@@ -96,9 +80,7 @@ else
         echo "----------------------------------------------"
 
         echo "*** Scraping WAYBACK data ***"
-        cat $url/recon/httprobe/alive.txt|waybackurls>>$url/recon/wayback/output.txt
-        sort -u $url/recon/wayback/output.txt | anew $url/recon/wayback/wayback_output.txt
-        rm $url/recon/wayback/output.txt
+        cat $url/recon/final.txt | sort -u | waybackurls | sort -u | anew $url/recon/wayback/wayback_output.txt
         echo "----------------------------------------------"
 
         echo "*** Pulling and compiling all possible params found in wayback data ***"
